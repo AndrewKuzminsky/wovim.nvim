@@ -3,7 +3,7 @@ local M = {}
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "wod",
   callback = function()
-    require("wovim.syntax.wod") -- Load syntax rules
+    require("syntax.wod") -- Load syntax rules
   end,
   group = vim.api.nvim_create_augroup("WODSyntax", { clear = true }),
 })
