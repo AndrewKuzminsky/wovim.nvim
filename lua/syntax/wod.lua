@@ -1,4 +1,6 @@
-local function setup_syntax()
+local M = {}
+
+function M.setup()
   if vim.b.current_syntax then
     return
   end
@@ -34,4 +36,4 @@ local function setup_syntax()
   vim.b.current_syntax = "wod"
 end
 
-setup_syntax()
+return M

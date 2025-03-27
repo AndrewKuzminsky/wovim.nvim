@@ -3,7 +3,7 @@ local M = {}
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "wod",
   callback = function()
-    require("syntax.wod") -- Load syntax rules
+    require("syntax.wod").setup() -- Load syntax rules for .wod files
   end,
   group = vim.api.nvim_create_augroup("WODSyntax", { clear = true }),
 })
@@ -20,7 +20,7 @@ function M.open_wo()
       vim.bo.filetype = "wod"
       vim.api.nvim_set_current_win(current_window)
     else
-      print("[WOVIM] No .wod found!")
+      print("[WOVIM] No .wod found!") -- no accompanying .wod file for .html file
     end
   end
 end
