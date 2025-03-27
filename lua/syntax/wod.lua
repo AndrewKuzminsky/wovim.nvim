@@ -11,7 +11,7 @@ function M.setup()
   vim.api.nvim_command('syntax match wodProperty "\\v\\w+\\ze\\s*\\=" contains=wodKeywords')
 
   -- Component Type
-  vim.api.nvim_command('syntax match wodTypes "\\v<(WO|ERXWO|AE|Ajax|SD)\\w+"')
+  vim.api.nvim_command('syntax match wodTypes "\\v<(WO|ERXWO|Ajax)\\w+"')
   -- FIXME: not functional
   vim.api.nvim_command('syntax match wodDefinition "\\v:\\s*\\zs\\w+\\ze\\s*\\{" contains=wodTypes')
 
