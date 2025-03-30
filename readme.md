@@ -16,7 +16,4 @@ return {
   config = function()
     require("wovim")
   end,
-  keys = {
-    { "<leader>bw", desc = "WOD Component Browser" },
-  },
 }
