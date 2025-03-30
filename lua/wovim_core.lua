@@ -14,7 +14,7 @@ function M.setup()
   vim.keymap.set("n", "<leader>bw", M.open_wod, {
     noremap = true,
     silent = true,
-    desc = "Open WOD Component Browser",
+    desc = "Open WOD Browser",
   })
 end
 
@@ -64,7 +64,7 @@ function M.open_wod(opts)
   -- Telescope Picker
   pickers
     .new(opts, {
-      prompt_title = "WOD Management (" .. #components.raw .. ")",
+      prompt_title = "WOD Browser(" .. #components.raw .. ")",
       finder = finders.new_table({
         results = components.raw,
         entry_maker = function(entry)
