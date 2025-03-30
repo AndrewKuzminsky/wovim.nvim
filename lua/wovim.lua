@@ -1,4 +1,3 @@
--- TODO: This should probably be an init.lua? & wovim_core should probably just be wovim?
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "html", "wod" },
 
