@@ -1,40 +1,21 @@
+local wod_parser = require("wodparser")
+-- TELESCOPE
+local pickers = require("telescope.pickers")
+local finders = require("telescope.finders")
+local previewers = require("telescope.previewers")
+local actions = require("telescope.actions")
+local action_state = require("telescope.actions.state")
+local telescope_config = require("telescope.config").values
+
 local M = {}
 
-local function create_floating_window(config)
-  -- create a buffer
-  local buf = vim.api.nvim_create_buf(false, true) -- no file, scratch buffer
-  local win = vim.api.nvim_open_win(buf, true, config)
-
-  return { buf = buf, win = win }
-end
-
-local create_window_configurations = function(window_scale)
-  local centered_width = math.floor(vim.o.columns * window_scale)
-  local centered_height = math.floor(vim.o.lines * window_scale)
-
-  local centered_col = math.floor((vim.o.columns - centered_width) / 2)
-  local centered_row = math.floor((vim.o.lines - centered_height) / 2)
-
-  return {
-    popup_window = {
-      relative = "editor",
-      width = centered_width,
-      height = centered_height,
-      style = "minimal",
-      col = centered_col,
-      row = centered_row,
-      zindex = 1,
-    },
-    header = {
-      relative = "editor",
-      width = centered_width,
-      height = 1,
-      style = "minimal",
-      col = centered_col,
-      row = 13,
-      zindex = 2,
-    },
-  }
+function M.setup()
+  -- Keybindings
+  vim.keymap.set("n", "<leader>bw", M.open_wod, {
+    noremap = true,
+    silent = true,
+    desc = "Open WOD Component Browser",
+  })
 end
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -66,42 +47,8 @@ end
 
 vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 
--- TODO: Implement Telescope search functionality.
-function M.open_wod()
-  local function parse_wod_components(wod_filename)
-    local lines = vim.fn.readfile(wod_filename)
-    local components = {}
-    local max_name_len = 0
-    local max_type_len = 0
-
-    for _, line in ipairs(lines) do
-      local name, wotype = line:match("^([%w_]+):%s*(%w+)%s*{")
-      if name and wotype then
-        table.insert(components, {
-          name = name,
-          type = wotype,
-          display = name .. ": " .. wotype,
-        })
-        max_name_len = math.max(max_name_len, #name)
-        max_type_len = math.max(max_type_len, #wotype)
-      end
-    end
-
-    -- Format components into aligned columns
-    local formatted = {}
-    for _, comp in ipairs(components) do
-      local padded_name = comp.name .. string.rep(" ", max_name_len - #comp.name)
-      local padded_type = comp.type .. string.rep(" ", max_type_len - #comp.type)
-      table.insert(formatted, padded_name .. " : " .. padded_type)
-    end
-
-    return {
-      raw = components,
-      formatted = formatted,
-      max_name_len = max_name_len,
-      max_type_len = max_type_len,
-    }
-  end
+function M.open_wod(opts)
+  opts = opts or {}
 
   local filename = vim.g.wovim_original_file or vim.fn.expand("%:p")
   local wod_filename = filename:gsub("%.html$", ".wod")
@@ -112,31 +59,92 @@ function M.open_wod()
   end
 
   -- Parse components
-  local components = parse_wod_components(wod_filename)
+  local components = wod_parser.parse(wod_filename)
 
-  -- Create floating window
-  local window_scale = 0.4
-  local window_config = create_window_configurations(window_scale)
-  local header_window = create_floating_window(window_config.header)
-  local wod_window = create_floating_window(window_config.popup_window)
+  -- Telescope Picker
+  pickers
+    .new(opts, {
+      prompt_title = "WOD Management (" .. #components.raw .. ")",
+      finder = finders.new_table({
+        results = components.raw,
+        entry_maker = function(entry)
+          return {
+            value = entry,
+            display = string.format(
+              "%-" .. components.max_name_len .. "s : %-" .. components.max_type_len .. "s",
+              entry.name,
+              entry.type
+            ),
+            ordinal = entry.name .. " " .. entry.type,
+            -- Track the starting line number of each component
+            line_number = entry.line_number or 1, -- Fallback to line 1 if unset
+            definition = entry.definition,
+          }
+        end,
+      }),
+      sorter = telescope_config.generic_sorter(opts),
+      previewer = previewers.new_buffer_previewer({
+        title = "Component Definition",
+        define_preview = function(self, entry)
+          local lines = vim.split(entry.value.definition, "\n")
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          vim.bo[self.state.bufnr].filetype = "wod"
+        end,
+      }),
+      attach_mappings = function(prompt_bufnr)
+        actions.select_default:replace(function()
+          local selection = action_state.get_selected_entry()
+          actions.close(prompt_bufnr)
 
-  -- Set window content
-  local title = "WOVIM - WOD Manager"
-  local padding = string.rep(" ", (window_config.popup_window.width - #title) / 2)
-  vim.api.nvim_buf_set_lines(header_window.buf, 0, -1, false, { padding .. title })
-  vim.api.nvim_buf_set_lines(wod_window.buf, 0, -1, false, components.formatted)
+          -- Find the window with the .wod file
+          local target_win = nil
+          local target_buf = vim.fn.bufnr(wod_filename)
 
-  -- Close on 'q'
-  vim.keymap.set("n", "q", function()
-    vim.api.nvim_win_close(wod_window.win, true)
-    vim.api.nvim_win_close(header_window.win, true)
-  end, { buffer = wod_window.buf })
+          for _, win in ipairs(vim.api.nvim_list_wins()) do
+            local buf = vim.api.nvim_win_get_buf(win)
+            if vim.api.nvim_buf_get_name(buf) == wod_filename then
+              target_win = win
+              break
+            end
+          end
 
-  -- Refresh on <leader>r
-  vim.keymap.set("n", "<leader>r", function()
-    local new_components = parse_wod_components(wod_filename)
-    vim.api.nvim_buf_set_lines(wod_window.buf, 0, -1, false, new_components.formatted)
-  end, { buffer = wod_window.buf })
+          if target_win then
+            -- Switch to the window and set cursor position
+            vim.api.nvim_set_current_win(target_win)
+            if selection and selection.value and selection.value.line_number then
+              -- Set the target window for our cursor
+              vim.api.nvim_win_set_cursor(target_win, { selection.value.line_number, 0 })
+              vim.cmd("normal! zz") -- Center Buffer
+
+              -- Highlights the selection temporarily on jump
+              local ns = vim.api.nvim_create_namespace("wod_jump")
+              vim.api.nvim_buf_add_highlight(target_buf, ns, "Search", selection.value.line_number - 1, 0, -1)
+              vim.defer_fn(function()
+                vim.api.nvim_buf_clear_namespace(target_buf, ns, 0, -1)
+              end, 1500)
+            end
+          else
+            -- Open in vertical split if none exist as a fallback
+            vim.cmd("vsplit " .. vim.fn.fnameescape(wod_filename))
+            if selection and selection.value and selection.value.line_number then
+              vim.api.nvim_win_set_cursor(0, { selection.value.line_number, 0 })
+              vim.cmd("normal! zz")
+            end
+          end
+        end)
+        return true
+      end,
+      layout_strategy = "horizontal",
+      layout_config = {
+        width = 0.9,
+        height = 0.8,
+        prompt_position = "top",
+        preview_width = 0.5,
+        mirror = false,
+      },
+      sorting_strategy = "ascending",
+    })
+    :find()
 end
 
 vim.api.nvim_create_user_command("OpenWOD", M.open_wod, {})
