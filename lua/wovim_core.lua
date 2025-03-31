@@ -20,7 +20,7 @@ function M.setup()
   vim.keymap.set("n", "<leader>be", M.edit_wod, {
     noremap = true,
     silent = true,
-    desc = "Edit WOD Component",
+    desc = "Edit WOD",
   })
 end
 
