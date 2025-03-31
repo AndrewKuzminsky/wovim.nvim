@@ -1,4 +1,4 @@
-## Requirements
+## Minimum Requirements
 - [neovim](https://neovim.io/)
 - [lazy.nvim](https://github.com/folke/lazy.nvim)
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
