@@ -69,6 +69,7 @@ function M.parse(wod_filename)
     max_type_len = max_type_len,
   }
 end
+-- end parse
 
 -- Indents for .WOComponent Definitions in the Preview
 function M.indent_wod_definition(def)
@@ -95,5 +96,6 @@ function M.indent_wod_definition(def)
 
   return result
 end
+-- end indent_wod_definition
 
 return M

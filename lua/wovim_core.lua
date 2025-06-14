@@ -23,6 +23,7 @@ function M.setup()
     desc = "Edit WOD",
   })
 end
+-- end setup
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "wod",
@@ -50,13 +51,17 @@ function M.open_wo()
     end
   end
 end
+-- end open_wo
 
 vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 
 -- Edit the WOD, adding component definitions
+-- FIXME: Needs to be flexible...but how to parse all available components to the project?
 function M.edit_wod()
-  -- TODO: Needs to be flexible...but how to parse all available components to the project?
-  --
+  -- TODO:
+  -- Access WOComponent Libraries from configured directories in plugin config
+  -- Perhaps bundle default WO stuff too rather than manually hooking it up?
+
   -- Define available component types
   local component_types = {
     "WOConditional",
@@ -177,6 +182,7 @@ function M.edit_wod()
     end)
   end)
 end
+-- end edit_wod
 
 vim.api.nvim_create_user_command("EditWOD", M.edit_wod, {})
 
@@ -219,7 +225,7 @@ function M.browse_wod(opts)
       sorter = telescope_config.generic_sorter(opts),
       previewer = previewers.new_buffer_previewer({
         title = "Component Definition",
-        --TODO: Indentation
+        -- TODO: Indentation
         define_preview = function(self, entry)
           local indented_lines = wod_parser.indent_wod_definition(entry.value.definition)
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, indented_lines)
@@ -250,12 +256,6 @@ function M.browse_wod(opts)
               -- Set the target window for our cursor
               vim.api.nvim_win_set_cursor(target_win, { selection.value.line_number, 0 })
               vim.cmd("normal! zz") -- Center Buffer
-
-              -- local ns = vim.api.nvim_create_namespace("wod_jump")
-              -- vim.api.nvim_buf_add_highlight(target_buf, ns, "Search", selection.value.line_number - 1, 0, -1)
-              -- vim.defer_fn(function()
-              --   vim.api.nvim_buf_clear_namespace(target_buf, ns, 0, -1)
-              -- end, 1500)
             end
           else
             -- Open in vertical split if none exist as a fallback
@@ -280,12 +280,13 @@ function M.browse_wod(opts)
     })
     :find()
 end
+-- end browse_wod
 
 vim.api.nvim_create_user_command("OpenWOD", M.browse_wod, {})
 
--- Jump to WOD Definitions using gd
 -- FIXME: doesnt work
 --
+-- Jump to WOD Definitions using gd
 -- local function goto_wod_definition()
 --   local line = vim.fn.getline(".")
 --   -- Match patterns like <webobject name="Conditional3">
@@ -329,7 +330,8 @@ vim.api.nvim_create_user_command("OpenWOD", M.browse_wod, {})
 --     print("Definition not found in .wod file")
 --   end
 -- end
---
+-- end goto_wod_definition
+
 -- vim.api.nvim_set_keymap("n", "gd", "<cmd>lua goto_wod_definition()<CR>", { noremap = true, silent = true })
 
 -- vim.api.nvim_create_autocmd("FileType", {
