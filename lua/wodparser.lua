@@ -70,4 +70,30 @@ function M.parse(wod_filename)
   }
 end
 
+-- Indents for .WOComponent Definitions in the Preview
+function M.indent_wod_definition(def)
+  local lines = vim.split(def, "\n", { plain = true })
+  local indent = 0
+  local result = {}
+
+  for _, line in ipairs(lines) do
+    local trimmed = vim.trim(line)
+
+    -- Decrease indent before line if it starts with }
+    if trimmed:match("^}") then
+      indent = indent - 1
+    end
+
+    -- Apply indent
+    table.insert(result, string.rep("  ", math.max(indent, 0)) .. trimmed)
+
+    -- Increase indent after line if it ends with {
+    if trimmed:match("{$") then
+      indent = indent + 1
+    end
+  end
+
+  return result
+end
+
 return M

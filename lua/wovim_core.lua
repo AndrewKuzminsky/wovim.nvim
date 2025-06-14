@@ -219,9 +219,10 @@ function M.browse_wod(opts)
       sorter = telescope_config.generic_sorter(opts),
       previewer = previewers.new_buffer_previewer({
         title = "Component Definition",
+        --TODO: Indentation
         define_preview = function(self, entry)
-          local lines = vim.split(entry.value.definition, "\n")
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          local indented_lines = wod_parser.indent_wod_definition(entry.value.definition)
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, indented_lines)
           vim.bo[self.state.bufnr].filetype = "wod"
         end,
       }),
@@ -250,12 +251,11 @@ function M.browse_wod(opts)
               vim.api.nvim_win_set_cursor(target_win, { selection.value.line_number, 0 })
               vim.cmd("normal! zz") -- Center Buffer
 
-              -- Highlights the selection temporarily on jump
-              local ns = vim.api.nvim_create_namespace("wod_jump")
-              vim.api.nvim_buf_add_highlight(target_buf, ns, "Search", selection.value.line_number - 1, 0, -1)
-              vim.defer_fn(function()
-                vim.api.nvim_buf_clear_namespace(target_buf, ns, 0, -1)
-              end, 1500)
+              -- local ns = vim.api.nvim_create_namespace("wod_jump")
+              -- vim.api.nvim_buf_add_highlight(target_buf, ns, "Search", selection.value.line_number - 1, 0, -1)
+              -- vim.defer_fn(function()
+              --   vim.api.nvim_buf_clear_namespace(target_buf, ns, 0, -1)
+              -- end, 1500)
             end
           else
             -- Open in vertical split if none exist as a fallback
