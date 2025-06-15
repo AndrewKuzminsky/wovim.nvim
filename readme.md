@@ -7,6 +7,8 @@
 **I highly suggest using [LazyVim](https://www.lazyvim.org/installation) as it comes with lazy.nvim and a bunch of useful nvim plugins.**
 
 Simply add the following to your /plugins/ directory as `wovim.lua` and let **lazy.nvim** handle the rest.
+be sure to specify paths to .api files (via api_paths) so WOVIM can parse component definitions.
+
 ```lua
 return {
   "AndrewKuzminsky/wovim.nvim",
@@ -14,6 +16,11 @@ return {
     "nvim-telescope/telescope.nvim",
   },
   config = function()
-    require("wovim")
+    require("wovim").setup({
+      api_paths = {
+        "/path/to/your/frameworks",
+        "/another/path/to/other/frameworks",
+      },
+    })
   end,
 }
