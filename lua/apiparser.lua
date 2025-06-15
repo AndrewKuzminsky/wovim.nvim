@@ -31,7 +31,7 @@ function M.parse(api_file_path)
   if wodefinitions then
     local bindings = {}
     for name in wodefinitions:gmatch('<binding%s+name="(.-)"') do
-      print(filename .. " - inserting binding: " .. name)
+      -- print(filename .. " - inserting binding: " .. name)
       table.insert(bindings, name)
     end
 
