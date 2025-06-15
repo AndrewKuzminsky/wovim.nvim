@@ -1,4 +1,5 @@
 local wod_parser = require("wodparser")
+local api_parser = require("apiparser")
 -- TELESCOPE
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
@@ -9,7 +10,38 @@ local telescope_config = require("telescope.config").values
 
 local M = {}
 
-function M.setup()
+M.api_bindings = api_parser.get_index()
+
+local unique_set = {}
+local unique_list = {}
+
+-- FIXME: Called twice, likely due to my poor directory structure
+--
+-- Merge user config into default
+function M.setup(user_config)
+  for _, dir in ipairs(user_config.api_paths or {}) do
+    local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
+    for _, filepath in ipairs(filepaths) do
+      if not unique_set[filepath] then
+        unique_set[filepath] = true
+        table.insert(unique_list, filepath)
+      end
+    end
+  end
+
+  -- PARSE ALL API FILES (when necessary)
+  if next(M.api_bindings) == nil then
+    api_parser.parse_all(unique_list)
+  end
+
+  -- local api_bindings = api_parser.get_index()
+  -- for _, unique_api_file in ipairs(unique_list) do
+  --   print("Unique API filepath: " .. unique_api_file)
+  --   for _, binding in ipairs(M.api_bindings[unique_api_file]) do
+  --     print("Binding: " .. binding)
+  --   end
+  -- end
+
   -- Keybindings
   vim.keymap.set("n", "<leader>bw", M.browse_wod, {
     noremap = true,
@@ -56,28 +88,15 @@ end
 vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 
 -- Edit the WOD, adding component definitions
--- FIXME: Needs to be flexible...but how to parse all available components to the project?
 function M.edit_wod()
-  -- TODO:
-  -- Access WOComponent Libraries from configured directories in plugin config
-  -- Perhaps bundle default WO stuff too rather than manually hooking it up?
+  -- TODO: Perhaps bundle default WO stuff too rather than manually hooking it up?
 
   -- Define available component types
-  local component_types = {
-    "WOConditional",
-    "WOForm",
-    "WORepetition",
-    "WOHyperlink",
-    "WOText",
-    "WOCheckBox",
-    "WOPopUpButton",
-    "WORadioButton",
-    "WOSubmitButton",
-    "WOTextField",
-    "WOHiddenField",
-    "WOPasswordField",
-    "WOTextarea",
-  }
+  local component_types = {}
+
+  for _, unique_api_file in ipairs(unique_list) do
+    table.insert(component_types, vim.fn.fnamemodify(unique_api_file, ":t:r"))
+  end
 
   -- Get current file paths
   local html_file = vim.api.nvim_buf_get_name(0)
@@ -119,14 +138,23 @@ function M.edit_wod()
       )
 
       -- 2. Format WOD definition
-      local wod_definition = {
-        tag_name .. ": " .. selected_type .. " {",
-        "    // TODO: Add bindings",
-        "}",
-      }
+      local wod_definition = {}
+      table.insert(wod_definition, tag_name .. ": " .. selected_type .. " {")
+      table.insert(wod_definition, "    // TODO: Tweak bindings")
+
+      -- Insert each binding
+      print("Selected Type: " .. vim.inspect(selected_type))
+
+      for _, binding in pairs(M.api_bindings[selected_type] or {}) do
+        print("Binding -  " .. binding)
+        table.insert(wod_definition, "    " .. binding .. " = ;") -- Adjust formatting as needed
+      end
+      -- Close the block
+      table.insert(wod_definition, "}")
 
       -- Find existing WOD window if open
       local wod_win
+
       for _, win in ipairs(vim.api.nvim_list_wins()) do
         if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)) == wod_file then
           wod_win = win
@@ -225,7 +253,6 @@ function M.browse_wod(opts)
       sorter = telescope_config.generic_sorter(opts),
       previewer = previewers.new_buffer_previewer({
         title = "Component Definition",
-        -- TODO: Indentation
         define_preview = function(self, entry)
           local indented_lines = wod_parser.indent_wod_definition(entry.value.definition)
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, indented_lines)
