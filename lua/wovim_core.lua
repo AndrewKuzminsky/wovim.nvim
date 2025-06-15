@@ -143,10 +143,10 @@ function M.edit_wod()
       table.insert(wod_definition, "    // TODO: Tweak bindings")
 
       -- Insert each binding
-      print("Selected Type: " .. vim.inspect(selected_type))
+      -- print("Selected Type: " .. vim.inspect(selected_type))
 
       for _, binding in pairs(M.api_bindings[selected_type] or {}) do
-        print("Binding -  " .. binding)
+        -- print("Binding -  " .. binding)
         table.insert(wod_definition, "    " .. binding .. " = ;") -- Adjust formatting as needed
       end
       -- Close the block
