@@ -1,5 +1,11 @@
 local M = {}
 
+local api_index = {}
+
+function M.get_index()
+  return api_index
+end
+
 -- EXAMPLE .API DEFINITION
 -- <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 -- <wodefinitions>
@@ -18,13 +24,6 @@ local M = {}
 --     <binding name = "class"/>
 -- 	</wo>
 -- </wodefinitions>
-
-local api_index = {}
-
-function M.get_index()
-  return api_index
-end
-
 local function write_component_file(filename, wodefinitions)
   local path_sep = package.config:sub(1, 1)
 
@@ -51,32 +50,6 @@ local function write_component_file(filename, wodefinitions)
     print("[WOVIM] Error: Could not open file " .. filepath)
   end
 end
-
--- Parses a .api file
-function M.parse(api_file_path)
-  -- Load the file
-  local api_content = table.concat(vim.fn.readfile(api_file_path), "\n")
-
-  -- extract wodefinitions
-  local wodefinitions = api_content:match("<wodefinitions>(.-)</wodefinitions>")
-  local filename = vim.fn.fnamemodify(api_file_path, ":t:r") -- trim & root
-
-  if wodefinitions then
-    write_component_file(filename, wodefinitions)
-  end
-end
--- end parse
-
-function M.parse_all(filepaths)
-  vim.notify("[WOVIM] Building WOVIM Data...")
-  for _, path in ipairs(filepaths) do
-    -- print("Parsing .. " .. path)
-    M.parse(path)
-  end
-  vim.notify("[WOVIM] Completed Building/Rebuilding WOVIM Data!")
-  -- return api_index
-end
--- end parse_all
 
 -- EXAMPLE DEFINITION FOR CENTRALISED RETRIEVAL
 -- <ERPPieChart>
@@ -118,6 +91,32 @@ function M.read_component_file(filename)
 
   api_index[filename] = bindings
 end
--- end retrieve_component_file
+-- end read_component_file
+
+-- Parses a .api file
+function M.parse(api_file_path)
+  -- Load the file
+  local api_content = table.concat(vim.fn.readfile(api_file_path), "\n")
+
+  -- extract wodefinitions
+  local wodefinitions = api_content:match("<wodefinitions>(.-)</wodefinitions>")
+  local filename = vim.fn.fnamemodify(api_file_path, ":t:r") -- trim & root
+
+  if wodefinitions then
+    write_component_file(filename, wodefinitions)
+  end
+end
+-- end parse
+
+function M.parse_all(filepaths)
+  vim.notify("[WOVIM] Building WOVIM Data...")
+  for _, path in ipairs(filepaths) do
+    -- print("Parsing .. " .. path)
+    M.parse(path)
+  end
+  vim.notify("[WOVIM] Completed Building/Rebuilding WOVIM Data!")
+  -- return api_index
+end
+-- end parse_all
 
 return M
