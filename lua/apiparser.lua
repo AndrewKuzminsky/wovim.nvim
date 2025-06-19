@@ -74,6 +74,23 @@ function M.parse_all(filepaths)
 end
 -- end parse_all
 
+-- EXAMPLE DEFINITION FOR CENTRALISED RETRIEVAL
+-- <ERPPieChart>
+--   <binding name="height"></binding>
+--   <binding name="width"></binding>
+--   <binding name="items"></binding>
+--   <binding name="type"></binding>
+--   <binding name="nameKey"></binding>
+--   <binding name="valueKey"></binding>
+--   <binding name="dataset"></binding>
+--   <binding name="orientation"></binding>
+--   <binding name="showUrls"></binding>
+--   <binding name="showLegends"></binding>
+--   <binding name="showToolTips"></binding>
+--   <binding name="chart"></binding>
+--   <binding name="configuration"></binding>
+--   <binding name="showLabels"></binding>
+-- </ERPPieChart>
 function M.retrieve_component_file(filename)
   local path_sep = package.config:sub(1, 1)
   -- data/wovim
