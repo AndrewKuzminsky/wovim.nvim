@@ -16,9 +16,9 @@ local unique_set = {}
 local unique_list = {}
 
 -- FIXME: Called twice, likely due to my poor directory structure
---
 -- Merge user config into default
 function M.setup(user_config)
+  -- Setup Unique List incase we need to rebuild / build wovim data
   for _, dir in ipairs(user_config.api_paths or {}) do
     local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
     for _, filepath in ipairs(filepaths) do
@@ -28,19 +28,6 @@ function M.setup(user_config)
       end
     end
   end
-
-  -- PARSE ALL API FILES (when necessary)
-  if next(M.api_bindings) == nil then
-    api_parser.parse_all(unique_list)
-  end
-
-  -- local api_bindings = api_parser.get_index()
-  -- for _, unique_api_file in ipairs(unique_list) do
-  --   print("Unique API filepath: " .. unique_api_file)
-  --   for _, binding in ipairs(M.api_bindings[unique_api_file]) do
-  --     print("Binding: " .. binding)
-  --   end
-  -- end
 
   -- Keybindings
   vim.keymap.set("n", "<leader>bw", M.browse_wod, {
@@ -53,6 +40,12 @@ function M.setup(user_config)
     noremap = true,
     silent = true,
     desc = "Edit WOD",
+  })
+
+  vim.keymap.set("n", "<leader>x,", M.build_wovim_data, {
+    noremap = true,
+    silent = true,
+    desc = "Build WOVIM Data",
   })
 end
 -- end setup
@@ -86,6 +79,15 @@ end
 -- end open_wo
 
 vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
+
+-- WARNING: This is a potentially expensive operation, do this sparingly!
+-- Setup / rebuild wovim data
+function M.build_wovim_data()
+  api_parser.parse_all(unique_list)
+end
+-- end open_wo
+
+vim.api.nvim_create_user_command("BuildWOVIM", M.build_wovim_data, {})
 
 -- Edit the WOD, adding component definitions
 function M.edit_wod()
@@ -142,13 +144,16 @@ function M.edit_wod()
       table.insert(wod_definition, tag_name .. ": " .. selected_type .. " {")
       table.insert(wod_definition, "    // TODO: Tweak bindings")
 
-      -- Insert each binding
-      -- print("Selected Type: " .. vim.inspect(selected_type))
+      -- If the selected type hasnt been read yet...read it and it should automatically be added to our global table
+      -- TODO: what happens when the table gets too big? should i set a size limit?
+      if not M.api_bindings[selected_type] or vim.tbl_isempty(M.api_bindings[selected_type]) then
+        api_parser.retrieve_component_file(selected_type)
+      end
 
       for _, binding in pairs(M.api_bindings[selected_type] or {}) do
-        -- print("Binding -  " .. binding)
         table.insert(wod_definition, "    " .. binding .. " = ;") -- Adjust formatting as needed
       end
+
       -- Close the block
       table.insert(wod_definition, "}")
 
@@ -266,7 +271,7 @@ function M.browse_wod(opts)
 
           -- Find the window with the .wod file
           local target_win = nil
-          local target_buf = vim.fn.bufnr(wod_filename)
+          -- local target_buf = vim.fn.bufnr(wod_filename)
 
           for _, win in ipairs(vim.api.nvim_list_wins()) do
             local buf = vim.api.nvim_win_get_buf(win)
