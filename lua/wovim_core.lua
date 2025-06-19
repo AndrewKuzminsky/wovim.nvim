@@ -95,9 +95,14 @@ function M.edit_wod()
 
   -- Define available component types
   local component_types = {}
+  local seen_filenames = {}
 
   for _, unique_api_file in ipairs(unique_list) do
-    table.insert(component_types, vim.fn.fnamemodify(unique_api_file, ":t:r"))
+    local filename = vim.fn.fnamemodify(unique_api_file, ":t:r")
+    if not seen_filenames[filename] then
+      table.insert(component_types, filename)
+      seen_filenames[filename] = true
+    end
   end
 
   -- Get current file paths
