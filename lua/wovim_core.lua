@@ -147,7 +147,7 @@ function M.edit_wod()
       -- If the selected type hasnt been read yet...read it and it should automatically be added to our global table
       -- TODO: what happens when the table gets too big? should i set a size limit?
       if not M.api_bindings[selected_type] or vim.tbl_isempty(M.api_bindings[selected_type]) then
-        api_parser.retrieve_component_file(selected_type)
+        api_parser.read_component_file(selected_type)
       end
 
       for _, binding in pairs(M.api_bindings[selected_type] or {}) do

@@ -25,6 +25,33 @@ function M.get_index()
   return api_index
 end
 
+local function write_component_file(filename, wodefinitions)
+  local path_sep = package.config:sub(1, 1)
+
+  -- data/wovim
+  local directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
+  -- data/wovim/AjaxGrid.xml
+  local filepath = directory .. path_sep .. filename .. ".xml"
+
+  vim.fn.mkdir(directory, "p") -- create our directory if necessary
+  local file = io.open(filepath, "w+")
+  local indent = string.rep(" ", 2) -- 2 spaces
+  if file then
+    -- <AjaxGrid>
+    file:write("<" .. filename .. ">" .. "\n")
+
+    for name in wodefinitions:gmatch('<binding%s+name="(.-)"') do
+      -- <binding name="displayGroup"></binding>
+      file:write(indent .. '<binding name="' .. name .. '"></binding>\n')
+    end
+    -- </AjaxGrid>
+    file:write("</" .. filename .. ">" .. "\n")
+    file:close()
+  else
+    print("[WOVIM] Error: Could not open file " .. filepath)
+  end
+end
+
 -- Parses a .api file
 function M.parse(api_file_path)
   -- Load the file
@@ -35,30 +62,7 @@ function M.parse(api_file_path)
   local filename = vim.fn.fnamemodify(api_file_path, ":t:r") -- trim & root
 
   if wodefinitions then
-    local path_sep = package.config:sub(1, 1)
-
-    -- data/wovim
-    local directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
-    -- data/wovim/AjaxGrid.xml
-    local filepath = directory .. path_sep .. filename .. ".xml"
-
-    vim.fn.mkdir(directory, "p") -- create our directory if necessary
-    local file = io.open(filepath, "w+")
-    local indent = string.rep(" ", 2) -- 2 spaces
-    if file then
-      -- <AjaxGrid>
-      file:write("<" .. filename .. ">" .. "\n")
-
-      for name in wodefinitions:gmatch('<binding%s+name="(.-)"') do
-        -- <binding name="displayGroup"></binding>
-        file:write(indent .. '<binding name="' .. name .. '"></binding>\n')
-      end
-      -- </AjaxGrid>
-      file:write("</" .. filename .. ">" .. "\n")
-      file:close()
-    else
-      print("[WOVIM] Error: Could not open file " .. filepath)
-    end
+    write_component_file(filename, wodefinitions)
   end
 end
 -- end parse
@@ -91,7 +95,7 @@ end
 --   <binding name="configuration"></binding>
 --   <binding name="showLabels"></binding>
 -- </ERPPieChart>
-function M.retrieve_component_file(filename)
+function M.read_component_file(filename)
   local path_sep = package.config:sub(1, 1)
   -- data/wovim
   local directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
