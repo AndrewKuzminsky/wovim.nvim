@@ -12,10 +12,6 @@ function M.parse(wod_filename)
     -- Normalize line endings and clean input
     line = line:gsub("\r$", ""):gsub("^%s*(.-)%s*$", "%1")
 
-    -- More robust pattern matching that handles:
-    -- 1. Component names with numbers (Component1)
-    -- 2. Various spacing patterns
-    -- 3. Optional whitespace before {
     local name, wotype = line:match("^([%a_][%w_]*):%s*([%a][%w]*)%s*{?$")
     if name and wotype then
       -- Finalize previous component if exists
