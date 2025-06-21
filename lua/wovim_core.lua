@@ -14,10 +14,10 @@ M.api_bindings = api_parser.get_index()
 
 local unique_set = {}
 local unique_list = {}
+local use_allman_style = false -- define the style of inserted brackets (false = K&R / true = Allman)
 
--- FIXME: Called twice, likely due to my poor directory structure
--- Merge user config into default
 function M.setup(user_config)
+  use_allman_style = user_config.use_allman_style or false
   -- Setup Unique List incase we need to rebuild / build wovim data
   for _, dir in ipairs(user_config.api_paths or {}) do
     local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
@@ -99,6 +99,8 @@ function M.edit_wod()
 
   for _, unique_api_file in ipairs(unique_list) do
     local filename = vim.fn.fnamemodify(unique_api_file, ":t:r")
+    -- Probably not quite necessary anymore...good defense against duplicate component names though.
+    -- may be a good idea to make this unique per framework?
     if not seen_filenames[filename] then
       table.insert(component_types, filename)
       seen_filenames[filename] = true
@@ -146,11 +148,17 @@ function M.edit_wod()
 
       -- 2. Format WOD definition
       local wod_definition = {}
-      table.insert(wod_definition, tag_name .. ": " .. selected_type .. " {")
-      table.insert(wod_definition, "    // TODO: Tweak bindings")
+
+      if use_allman_style then
+        table.insert(wod_definition, tag_name .. ": " .. selected_type)
+        table.insert(wod_definition, "{")
+      else
+        table.insert(wod_definition, tag_name .. ": " .. selected_type .. " {")
+      end
+      table.insert(wod_definition, "    // TODO: setup bindings")
 
       -- If the selected type hasnt been read yet...read it and it should automatically be added to our global table
-      -- TODO: what happens when the table gets too big? should i set a size limit?
+      -- TODO: what happens when the table gets too big? should a size limit be set?
       if not M.api_bindings[selected_type] or vim.tbl_isempty(M.api_bindings[selected_type]) then
         api_parser.read_component_file(selected_type)
       end

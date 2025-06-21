@@ -32,6 +32,7 @@ function M.parse(wod_filename)
         line_number = line_num,
         display = name .. ": " .. wotype,
       }
+
       max_name_len = math.max(max_name_len, #name)
       max_type_len = math.max(max_type_len, #wotype)
     elseif current_component then

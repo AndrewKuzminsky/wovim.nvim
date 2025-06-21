@@ -1,4 +1,5 @@
 local M = {}
+local session_setup_called = false
 
 M.config = {
   api_paths = {},
@@ -9,7 +10,6 @@ function M.setup(user_config)
 
   vim.api.nvim_create_autocmd("FileType", {
     pattern = { "html", "wod" },
-
     callback = function()
       local filename = vim.fn.expand("%:p")
 
@@ -18,8 +18,11 @@ function M.setup(user_config)
       -- Check if the parent directory ends with ".wo"
       if parent_dir:match(".+/.+%.wo$") then
         -- Automatically require the "wovim" module
-        require("wovim_core").setup(M.config)
-        vim.api.nvim_command("OpenWO") -- open accompanying .wod file in vsplit
+        if not session_setup_called then
+          session_setup_called = true
+          require("wovim_core").setup(M.config)
+          vim.api.nvim_command("OpenWO") -- open accompanying .wod file in vsplit
+        end
       end
     end,
   })

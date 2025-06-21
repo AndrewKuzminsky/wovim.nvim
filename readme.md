@@ -21,6 +21,7 @@ return {
         "/path/to/your/frameworks",
         "/another/path/to/other/frameworks",
       },
+      use_allman_style = false
     })
   end,
 }
