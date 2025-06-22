@@ -130,7 +130,7 @@ function M.build_wovim_data()
     local frameworks = {}
     for _, entry in ipairs(classpath_entries or {}) do
       local entry_name = vim.fn.fnamemodify(entry, ":t:r") -- trim & root
-      print("@wovim_core (build_wovim_data) - classpath_entries: " .. entry_name)
+      -- print("@wovim_core (build_wovim_data) - classpath_entries: " .. entry_name)
       frameworks[entry_name] = true
     end
 
@@ -157,7 +157,7 @@ function M.build_wovim_data()
   else
     -- Setup Unique List incase we need to rebuild / build wovim data
     for _, dir in ipairs(M.api_paths or {}) do
-      print("Checking Directory: " .. dir)
+      -- print("Checking Directory: " .. dir)
 
       local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
       for _, filepath in ipairs(filepaths) do
