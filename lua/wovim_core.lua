@@ -1,5 +1,8 @@
-local wod_parser = require("wodparser")
-local api_parser = require("apiparser")
+local api_parser = require("parsers.apiparser")
+local buildparser = require("parsers.buildparser")
+local classpathparser = require("parsers.classpathparser")
+local wod_parser = require("parsers.wodparser")
+
 -- TELESCOPE
 local pickers = require("telescope.pickers")
 local finders = require("telescope.finders")
@@ -8,20 +11,54 @@ local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local telescope_config = require("telescope.config").values
 
+-- TODO: I DONT want to double handle .api files as .xml files... rewrite this soon
 local M = {}
 
 M.api_bindings = api_parser.get_index()
 
 local unique_set = {}
 local unique_list = {}
+local session_project_name = nil
+local seen_project = {}
 local use_allman_style = false -- define the style of inserted brackets (false = K&R / true = Allman)
+local path_sep = package.config:sub(1, 1)
+M.api_paths = nil
 
 function M.setup(user_config)
+  api_parser.set_use_app_directories(user_config.use_app_directories or false)
   use_allman_style = user_config.use_allman_style or false
-  -- Setup Unique List incase we need to rebuild / build wovim data
-  for _, dir in ipairs(user_config.api_paths or {}) do
-    local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
-    for _, filepath in ipairs(filepaths) do
+  M.api_paths = user_config.api_paths
+
+  local project_name = nil
+
+  if user_config.use_app_directories then
+    if not session_project_name then
+      project_name = buildparser.get_project_name()
+    else
+      project_name = session_project_name
+    end
+
+    -- vim.notify("The Project Name is: " .. project_name)
+    -- seen_project[project_name] is session based so its likely always true
+    if not seen_project[project_name] then
+      seen_project[project_name] = true
+      local directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. project_name
+      -- read all files inside this directory
+      local preexisting_filepaths = vim.fn.glob(directory .. "/**/*.xml", false, true)
+      for _, filepath in ipairs(preexisting_filepaths) do
+        -- print("Not seen project " .. project_name .. " looking at filepath " .. filepath)
+        if not unique_set[filepath] then
+          unique_set[filepath] = true
+          table.insert(unique_list, filepath)
+        end
+      end
+    end
+  else -- Not Using App Directories
+    local directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
+    -- read all files inside this directory
+    local preexisting_filepaths = vim.fn.glob(directory .. "/**/*.xml", false, true)
+    for _, filepath in ipairs(preexisting_filepaths) do
+      -- print("Not seen project " .. project_name .. " looking at filepath " .. filepath)
       if not unique_set[filepath] then
         unique_set[filepath] = true
         table.insert(unique_list, filepath)
@@ -83,6 +120,55 @@ vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 -- WARNING: This is a potentially expensive operation, do this sparingly!
 -- Setup / rebuild wovim data
 function M.build_wovim_data()
+  if api_parser.use_app_directories() then
+    local classpath_entries = nil
+    -- Look at frameworks in our api_paths based on our classpath entries
+    classpath_entries = classpathparser.get_classpath_entries()
+    -- [Examples]
+    -- CLASSPATH_ENTRY: JavaWebObjects
+    -- CLASSPATH_ENTRY: JavaXML
+    local frameworks = {}
+    for _, entry in ipairs(classpath_entries or {}) do
+      local entry_name = vim.fn.fnamemodify(entry, ":t:r") -- trim & root
+      print("@wovim_core (build_wovim_data) - classpath_entries: " .. entry_name)
+      frameworks[entry_name] = true
+    end
+
+    -- empty the built list
+    unique_list = {}
+
+    for _, dir in ipairs(M.api_paths or {}) do
+      -- print("Checking Directory: " .. dir)
+      local all_dirs = vim.fn.glob(dir .. "/**/", true, true)
+      for _, subdir in ipairs(all_dirs) do
+        -- strip any trailing slashes
+        local trimmed_subdir = vim.fn.fnamemodify(subdir:gsub("/$", ""), ":t:r")
+        if frameworks[trimmed_subdir] then
+          local filepaths = vim.fn.glob(subdir .. "/**/*.api", false, true)
+          for _, filepath in ipairs(filepaths) do
+            if not unique_set[filepath] then
+              unique_set[filepath] = true
+              table.insert(unique_list, filepath)
+            end
+          end
+        end
+      end
+    end
+  else
+    -- Setup Unique List incase we need to rebuild / build wovim data
+    for _, dir in ipairs(M.api_paths or {}) do
+      print("Checking Directory: " .. dir)
+
+      local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
+      for _, filepath in ipairs(filepaths) do
+        if not unique_set[filepath] then
+          unique_set[filepath] = true
+          table.insert(unique_list, filepath)
+        end
+      end
+    end
+  end
+
   api_parser.parse_all(unique_list)
 end
 -- end open_wo
@@ -91,8 +177,6 @@ vim.api.nvim_create_user_command("BuildWOVIM", M.build_wovim_data, {})
 
 -- Edit the WOD, adding component definitions
 function M.edit_wod()
-  -- TODO: Perhaps bundle default WO stuff too rather than manually hooking it up?
-
   -- Define available component types
   local component_types = {}
   local seen_filenames = {}
@@ -328,62 +412,5 @@ end
 -- end browse_wod
 
 vim.api.nvim_create_user_command("OpenWOD", M.browse_wod, {})
-
--- FIXME: doesnt work
---
--- Jump to WOD Definitions using gd
--- local function goto_wod_definition()
---   local line = vim.fn.getline(".")
---   -- Match patterns like <webobject name="Conditional3">
---   local name = line:match('<webobject%s+name="([^"]+)"')
---   if not name then
---     return
---   end
---
---   -- Find .wod file in same directory
---   local wod_file = vim.fn.expand("%:p:r") .. ".wod"
---   if vim.fn.filereadable(wod_file) == 0 then
---     return
---   end
---
---   -- Search for the pattern "name: WOConditional" in wod file
---   local bufnr = vim.fn.bufnr(wod_file, true)
---   if bufnr == -1 then
---     return
---   end
---
---   -- Save current position
---   vim.fn.setpos("''", vim.fn.getpos("."))
---
---   -- Switch to wod file buffer
---   vim.api.nvim_set_current_buf(bufnr)
---
---   -- Search for the definition
---   local found = false
---   for i, l in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
---     if l:match("^" .. name .. ":") then
---       vim.fn.cursor(i, 1)
---       found = true
---       break
---     end
---   end
---
---   if not found then
---     -- Return to original position if not found
---     vim.cmd("buffer #")
---     vim.fn.setpos(".", vim.fn.getpos("''"))
---     print("Definition not found in .wod file")
---   end
--- end
--- end goto_wod_definition
-
--- vim.api.nvim_set_keymap("n", "gd", "<cmd>lua goto_wod_definition()<CR>", { noremap = true, silent = true })
-
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = "html",
---   callback = function()
---     vim.keymap.set("n", "gd", goto_wod_definition, { buffer = true, noremap = true, silent = true })
---   end,
--- })
 
 return M
