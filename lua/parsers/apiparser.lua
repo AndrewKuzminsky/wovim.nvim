@@ -1,8 +1,4 @@
-local buildparser = require("parsers.buildparser")
-local classpathparser = require("parsers.classpathparser")
-
 local M = {}
-local seen_project = {}
 local path_sep = package.config:sub(1, 1)
 
 local api_index = {}
@@ -57,10 +53,6 @@ local function write_component_file(filename, wodefinitions)
   local directory = nil
 
   if use_app_directories then
-    if M.project_name and not seen_project[M.project_name] then
-      seen_project[M.project_name] = true
-    end
-
     directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. M.project_name()
   else
     directory = vim.fn.stdpath("data") .. path_sep .. "wovim"

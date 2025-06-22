@@ -1,6 +1,5 @@
 local M = {}
 
--- TODO: Flexible Syntax Highlighting now that we can parse files & store data :)
 function M.setup()
   if vim.b.current_syntax then
     print("[WOVIM - Syntax] Unnecessary call to syntax setup.")

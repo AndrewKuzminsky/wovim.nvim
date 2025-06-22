@@ -18,10 +18,10 @@ M.api_paths = nil
 M.use_app_directories = true
 M.api_bindings = api_parser.get_index()
 
----@type boolean
--- define the style of inserted brackets
---`false` = K&R
---`true`  = Allman
+--- Define the style of inserted brackets
+--- @type boolean
+-- false = K&R
+-- true  = Allman
 M.use_allman_style = false
 
 -- TODO: Rename these to something with more clarity
