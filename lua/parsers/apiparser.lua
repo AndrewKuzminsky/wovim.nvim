@@ -141,14 +141,15 @@ end
 
 function M.parse_all(filepaths)
   if use_app_directories then
-    vim.notify("[WOVIM] Building APP WOVIM Data...")
+    vim.notify("[WOVIM] Building " .. M.project_name() .. " WOVIM Data...")
   else
-    vim.notify("[WOVIM] Building WOVIM Data...")
+    vim.notify("[WOVIM] Building Global WOVIM Data...")
   end
 
   for _, path in ipairs(filepaths) do
     M.parse(path)
   end
+
   vim.notify("[WOVIM] Completed Building/Rebuilding WOVIM Data!")
 end
 -- end parse_all

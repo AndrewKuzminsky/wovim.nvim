@@ -243,7 +243,7 @@ function M.edit_wod()
       -- 2. Format WOD definition
       local wod_definition = {}
 
-      if use_allman_style then
+      if M.use_allman_style then
         table.insert(wod_definition, tag_name .. ": " .. selected_type)
         table.insert(wod_definition, "{")
       else
