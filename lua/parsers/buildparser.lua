@@ -4,7 +4,6 @@ local uv = vim.loop
 local function find_build_xml()
   local path = vim.fn.expand("%:p:h") -- current file directory
   if path == "" then
-    -- path = vim.loop.cwd() -- fallback to current working directory
     path = vim.api.nvim_get_current_dir()
   end
 

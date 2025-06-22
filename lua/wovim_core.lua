@@ -18,6 +18,12 @@ M.api_paths = nil
 M.use_app_directories = true
 M.api_bindings = api_parser.get_index()
 
+---@type boolean
+-- define the style of inserted brackets
+--`false` = K&R
+--`true`  = Allman
+M.use_allman_style = false
+
 -- TODO: Rename these to something with more clarity
 local unique_set = {}
 local unique_list = {}
@@ -25,17 +31,18 @@ local unique_list = {}
 local session_project_name = nil
 local seen_project = {}
 
----@type boolean
--- define the style of inserted brackets
---`false` = K&R
---`true`  = Allman
-local use_allman_style = false
-
 function M.setup(user_config)
   M.api_paths = user_config.api_paths
-  M.use_app_directories = user_config.use_app_directories or true
-  api_parser.set_use_app_directories(user_config.use_app_directories or true)
-  use_allman_style = user_config.use_allman_style or false
+
+  if user_config.use_app_directories ~= nil then
+    M.use_app_directories = user_config.use_app_directories
+  end
+
+  api_parser.set_use_app_directories(M.use_app_directories)
+
+  if user_config.use_allman_style ~= nil then
+    M.use_allman_style = user_config.use_allman_style
+  end
 
   local path_sep = package.config:sub(1, 1)
   local project_name = nil
