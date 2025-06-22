@@ -2,8 +2,6 @@ local buildparser = require("parsers.buildparser")
 local classpathparser = require("parsers.classpathparser")
 
 local M = {}
--- FIXME: Think of a smarter way to handle session, want to avoid pollution with all these session vars
-local session_project_name = nil
 local seen_project = {}
 local path_sep = package.config:sub(1, 1)
 
@@ -13,7 +11,20 @@ function M.get_index()
   return api_index
 end
 
-local use_app_directories = false -- parsed DIR will be app-specific via the .classpaths spec :)
+local project_name = nil
+
+function M.project_name()
+  return project_name
+end
+
+function M.set_project_name(value)
+  project_name = value
+end
+
+--- @type boolean
+-- Controls if we want to use app-specific dirs via dictated by the .classpath
+-- Defaults to `true` as its more performative, `false` uses global framework behavior
+local use_app_directories = true
 
 function M.use_app_directories()
   return use_app_directories
@@ -44,29 +55,13 @@ end
 local function write_component_file(filename, wodefinitions)
   -- data/wovim
   local directory = nil
-  local project_name = nil
-  local classpath_entries = nil
 
   if use_app_directories then
-    if not session_project_name then
-      project_name = buildparser.get_project_name()
-    else
-      project_name = session_project_name
+    if M.project_name and not seen_project[M.project_name] then
+      seen_project[M.project_name] = true
     end
 
-    if not seen_project[project_name] then
-      classpath_entries = classpathparser.get_classpath_entries()
-      -- TODO: smarter classpath ignores
-      for _, entry in ipairs(classpath_entries or {}) do
-        -- local entry_name = vim.fn.fnamemodify(entry, ":t:r") -- trim & root
-        -- vim.notify("@api_parser - classpath_entries: " .. entry_name)
-        -- print("CLASSPATH_ENTRY: " .. entry)
-      end
-
-      seen_project[project_name] = true
-    end
-
-    directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. project_name
+    directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. M.project_name()
   else
     directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
   end
@@ -114,14 +109,7 @@ function M.read_component_file(filename)
   -- data/wovim
   local directory = nil
   if use_app_directories then
-    local project_name = nil
-    if not session_project_name then
-      project_name = buildparser.get_project_name()
-    else
-      project_name = session_project_name
-    end
-
-    directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. project_name
+    directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. M.project_name()
   else
     directory = vim.fn.stdpath("data") .. path_sep .. "wovim"
   end

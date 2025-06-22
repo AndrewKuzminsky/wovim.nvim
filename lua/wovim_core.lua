@@ -11,42 +11,52 @@ local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local telescope_config = require("telescope.config").values
 
--- TODO: I DONT want to double handle .api files as .xml files... rewrite this soon
-local M = {}
+-- TODO: I DONT want to double handle .api files as .xml files... rewrite this soon?
 
+local M = {}
+M.api_paths = nil
+M.use_app_directories = true
 M.api_bindings = api_parser.get_index()
 
+-- TODO: Rename these to something with more clarity
 local unique_set = {}
 local unique_list = {}
+
 local session_project_name = nil
 local seen_project = {}
-local use_allman_style = false -- define the style of inserted brackets (false = K&R / true = Allman)
-local path_sep = package.config:sub(1, 1)
-M.api_paths = nil
+
+---@type boolean
+-- define the style of inserted brackets
+--`false` = K&R
+--`true`  = Allman
+local use_allman_style = false
 
 function M.setup(user_config)
-  api_parser.set_use_app_directories(user_config.use_app_directories or false)
-  use_allman_style = user_config.use_allman_style or false
   M.api_paths = user_config.api_paths
+  M.use_app_directories = user_config.use_app_directories or true
+  api_parser.set_use_app_directories(user_config.use_app_directories or true)
+  use_allman_style = user_config.use_allman_style or false
 
+  local path_sep = package.config:sub(1, 1)
   local project_name = nil
 
-  if user_config.use_app_directories then
+  if M.use_app_directories then
     if not session_project_name then
       project_name = buildparser.get_project_name()
+      session_project_name = project_name
     else
       project_name = session_project_name
     end
 
-    -- vim.notify("The Project Name is: " .. project_name)
-    -- seen_project[project_name] is session based so its likely always true
+    api_parser.set_project_name(session_project_name)
+
+    -- INFO: seen_project[project_name] is session based so its likely always true... hmmm
     if not seen_project[project_name] then
       seen_project[project_name] = true
       local directory = vim.fn.stdpath("data") .. path_sep .. "wovim" .. path_sep .. project_name
       -- read all files inside this directory
       local preexisting_filepaths = vim.fn.glob(directory .. "/**/*.xml", false, true)
       for _, filepath in ipairs(preexisting_filepaths) do
-        -- print("Not seen project " .. project_name .. " looking at filepath " .. filepath)
         if not unique_set[filepath] then
           unique_set[filepath] = true
           table.insert(unique_list, filepath)
@@ -58,7 +68,6 @@ function M.setup(user_config)
     -- read all files inside this directory
     local preexisting_filepaths = vim.fn.glob(directory .. "/**/*.xml", false, true)
     for _, filepath in ipairs(preexisting_filepaths) do
-      -- print("Not seen project " .. project_name .. " looking at filepath " .. filepath)
       if not unique_set[filepath] then
         unique_set[filepath] = true
         table.insert(unique_list, filepath)
@@ -120,17 +129,13 @@ vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 -- WARNING: This is a potentially expensive operation, do this sparingly!
 -- Setup / rebuild wovim data
 function M.build_wovim_data()
-  if api_parser.use_app_directories() then
+  if M.use_app_directories then
     local classpath_entries = nil
     -- Look at frameworks in our api_paths based on our classpath entries
     classpath_entries = classpathparser.get_classpath_entries()
-    -- [Examples]
-    -- CLASSPATH_ENTRY: JavaWebObjects
-    -- CLASSPATH_ENTRY: JavaXML
     local frameworks = {}
     for _, entry in ipairs(classpath_entries or {}) do
       local entry_name = vim.fn.fnamemodify(entry, ":t:r") -- trim & root
-      -- print("@wovim_core (build_wovim_data) - classpath_entries: " .. entry_name)
       frameworks[entry_name] = true
     end
 
@@ -154,11 +159,9 @@ function M.build_wovim_data()
         end
       end
     end
-  else
+  else -- Global Approach
     -- Setup Unique List incase we need to rebuild / build wovim data
     for _, dir in ipairs(M.api_paths or {}) do
-      -- print("Checking Directory: " .. dir)
-
       local filepaths = vim.fn.glob(dir .. "/**/*.api", false, true)
       for _, filepath in ipairs(filepaths) do
         if not unique_set[filepath] then

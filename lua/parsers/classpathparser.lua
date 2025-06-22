@@ -18,16 +18,20 @@ local uv = vim.loop
 local function find_classpath()
   local path = vim.fn.expand("%:p:h") -- current file directory
   if path == "" then
-    path = vim.loop.cwd() -- fallback to current working directory
+    -- path = vim.loop.cwd() -- fallback to current working directory
+    path = vim.api.nvim_get_current_dir()
   end
 
   while path do
     local candidate = path .. "/.classpath"
+
+    ---@diagnostic disable-next-line: undefined-field
     local stat = uv.fs_stat(candidate)
     if stat and stat.type == "file" then
       return candidate
     end
 
+    ---@diagnostic disable-next-line: undefined-field
     local parent = uv.fs_realpath(path .. "/..")
     if not parent or parent == path then
       break
@@ -41,7 +45,6 @@ end
 function M.get_classpath_entries()
   local classpath = find_classpath()
   if classpath then
-    -- print("Found classpath at: " .. classpath)
     local file_content = table.concat(vim.fn.readfile(classpath), "\n")
 
     local classpath_entries = {}
