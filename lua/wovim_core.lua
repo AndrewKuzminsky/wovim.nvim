@@ -15,6 +15,7 @@ local telescope_config = require("telescope.config").values
 
 local M = {}
 M.api_paths = nil
+
 M.use_app_directories = true
 M.api_bindings = api_parser.get_index()
 
@@ -133,9 +134,54 @@ end
 
 vim.api.nvim_create_user_command("OpenWO", M.open_wo, {})
 
+local uv = vim.loop
+
+-- TODO: relocate to apiparser
+local function get_app_api_files()
+  local path = vim.fn.expand("%:p:h") -- current file directory
+  if path == "" then
+    path = vim.api.nvim_get_current_dir()
+  end
+
+  local components_path = nil
+
+  while path do
+    local candidate = path .. "/Components"
+
+    ---@diagnostic disable-next-line: undefined-field
+    local stat = uv.fs_stat(candidate)
+    if stat and stat.type == "directory" then
+      components_path = candidate
+      break
+    end
+
+    ---@diagnostic disable-next-line: undefined-field
+    local parent = uv.fs_realpath(path .. "/..")
+    if not parent or parent == path then
+      break
+    end
+    path = parent
+  end
+
+  if not components_path then
+    print("[WOVIM] - Components directory not found.")
+    return
+  end
+
+  local filepaths = vim.fn.glob(components_path .. "/**/*.api", false, true)
+
+  for _, filepath in ipairs(filepaths) do
+    if not unique_set[filepath] then
+      unique_set[filepath] = true
+      table.insert(unique_list, filepath)
+    end
+  end
+end
+
 -- WARNING: This is a potentially expensive operation, do this sparingly!
 -- Setup / rebuild wovim data
 function M.build_wovim_data()
+  -- STEP ONE: Parse Frameworks
   if M.use_app_directories then
     local classpath_entries = nil
     -- Look at frameworks in our api_paths based on our classpath entries
@@ -148,7 +194,7 @@ function M.build_wovim_data()
 
     -- empty the built list
     unique_list = {}
-
+    -- Scan from api_paths
     for _, dir in ipairs(M.api_paths or {}) do
       -- print("Checking Directory: " .. dir)
       local all_dirs = vim.fn.glob(dir .. "/**/", true, true)
@@ -178,6 +224,9 @@ function M.build_wovim_data()
       end
     end
   end
+
+  -- STEP TWO: Parse App Components
+  get_app_api_files()
 
   api_parser.parse_all(unique_list)
 end
