@@ -11,13 +11,12 @@ local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local telescope_config = require("telescope.config").values
 
--- TODO: I DONT want to double handle .api files as .xml files... rewrite this soon?
+-- FIXME: double handling .api files as .xml files... rewrite this soon?
 
 local M = {}
 M.api_paths = nil
-
-M.use_app_directories = true
 M.api_bindings = api_parser.get_index()
+M.use_app_directories = true
 
 --- Define the style of inserted brackets
 --- @type boolean
@@ -101,6 +100,18 @@ function M.setup(user_config)
     silent = true,
     desc = "Build WOVIM Data",
   })
+
+  vim.keymap.set("n", "gi", M.inspect_wod_definition, {
+    noremap = true,
+    silent = true,
+    desc = "Inspect WOD Definition",
+  })
+
+  -- vim.keymap.set("n", "<leader>gi", M.inspect_wod_definition, {
+  --   noremap = true,
+  --   silent = true,
+  --   desc = "Inspect WOD Definition",
+  -- })
 end
 -- end setup
 
@@ -374,6 +385,74 @@ end
 -- end edit_wod
 
 vim.api.nvim_create_user_command("EditWOD", M.edit_wod, {})
+
+local function show_in_floating_window(lines)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+  local width = math.floor(vim.o.columns * 0.6)
+  local height = math.floor(vim.o.lines * 0.6)
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  local win_opts = {
+    style = "minimal",
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    border = "rounded",
+    title = "Definition Inspector",
+    title_pos = "center",
+  }
+
+  local win = vim.api.nvim_open_win(buf, true, win_opts)
+
+  -- Keymap to close with 'q' or <Esc>
+  local function close_win()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+
+  vim.keymap.set("n", "q", close_win, { buffer = buf, nowait = true, silent = true })
+  vim.keymap.set("n", "<Esc>", close_win, { buffer = buf, nowait = true, silent = true })
+end
+
+function M.inspect_wod_definition()
+  -- Step 1: Get the component name.
+  local current_line = vim.api.nvim_get_current_line()
+  local component_name = string.match(current_line, ":%s*([A-Z]%w+)")
+  print("Inspecting.. " .. component_name)
+
+  if component_name == nil then
+    print("[WOVIM] - Error Inspecting Definition")
+    return
+  end
+
+  -- Step 2: Retrieve the parsed xml file & populate a lua table for the inspector
+  local wod_definition = {}
+
+  table.insert(wod_definition, component_name)
+  table.insert(wod_definition, "{")
+
+  -- If the selected type hasnt been read yet...read it and it should automatically be added to our global table
+  if not M.api_bindings[component_name] or vim.tbl_isempty(M.api_bindings[component_name]) then
+    api_parser.read_component_file(component_name)
+  end
+
+  for _, binding in pairs(M.api_bindings[component_name] or {}) do
+    table.insert(wod_definition, "    " .. binding)
+  end
+
+  table.insert(wod_definition, "}")
+
+  -- Step 3: Display the Inspector via floating window
+  show_in_floating_window(wod_definition)
+end
+
+vim.api.nvim_create_user_command("InspectDefinition", M.inspect_wod_definition, {})
 
 -- Browse the WOD using Telescope
 function M.browse_wod(opts)

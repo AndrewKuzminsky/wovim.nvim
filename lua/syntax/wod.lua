@@ -12,9 +12,6 @@ function M.setup()
 
   -- Component Type
   vim.api.nvim_command('syntax match wodTypes "\\v:\\s*\\zs[A-Z]\\w+"')
-
-  -- FIXME: not functional
-  -- vim.api.nvim_command('syntax match wodDefinition "\\v:\\s*\\zs\\w+\\ze\\s*\\{" contains=wodTypes')
   vim.api.nvim_command('syntax match wodComponent "^\\w+\\d*:"')
 
   -- Structure
